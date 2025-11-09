@@ -14,8 +14,7 @@
     
   </body>
   
-</html>
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -33,3 +32,147 @@
       <button id="connectBtn">🔗 Connect Wallet</button>
       <span id="network"></span>
     </div>
+
+    <div class="row">
+      <strong>Account:</strong> <span id="account">—</span>
+    </div>
+    <div class="row">
+      <strong>Your Vault Balance (ETH):</strong> <span id="vaultBal">0.0</span>
+      <button id="refreshBtn">⟳</button>
+    </div>
+
+    <hr/>
+
+    <div class="row">
+      <input id="depositAmt" type="number" min="0" step="0.0001" placeholder="Amount in ETH" />
+      <button id="depositBtn">⬆️ Deposit</button>
+    </div>
+
+    <div class="row">
+      <input id="withdrawAmt" type="number" min="0" step="0.0001" placeholder="Amount in ETH" />
+      <button id="withdrawBtn">⬇️ Withdraw</button>
+    </div>
+
+    <p id="status"></p>
+  </div>
+
+  <script>
+    // -------------------- CONFIG: put YOUR details here --------------------
+    const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS_HERE";
+    const CONTRACT_ABI = PASTE_ABI_JSON_HERE; // <-- paste the ABI array from Remix
+    // Optional: set the chain ID you deployed to (Base Sepolia = 0x14a34, Ethereum Sepolia = 0xaa36a7)
+    const REQUIRED_CHAIN_ID = null; // e.g. "0x14a34" for Base Sepolia; leave null to skip check
+    // ----------------------------------------------------------------------
+
+    // DOM
+    const connectBtn = document.getElementById("connectBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const depositBtn = document.getElementById("depositBtn");
+    const withdrawBtn = document.getElementById("withdrawBtn");
+    const depositAmt = document.getElementById("depositAmt");
+    const withdrawAmt = document.getElementById("withdrawAmt");
+    const statusEl = document.getElementById("status");
+    const accountEl = document.getElementById("account");
+    const networkEl = document.getElementById("network");
+    const vaultBalEl = document.getElementById("vaultBal");
+
+    let provider, signer, contract;
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+      console.log(msg);
+    }
+
+    async function ensureWallet() {
+      if (!window.ethereum) {
+        setStatus("MetaMask not detected. Install it to continue.");
+        throw new Error("No wallet");
+      }
+    }
+
+    async function connectWallet() {
+      try {
+        await ensureWallet();
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+
+        // network display
+        const net = await provider.getNetwork();
+        networkEl.textContent = `Network: ${net.name} (chainId ${net.chainId})`;
+
+        // optional chain guard
+        if (REQUIRED_CHAIN_ID && window.ethereum.chainId?.toLowerCase() !== REQUIRED_CHAIN_ID.toLowerCase()) {
+          setStatus("Wrong network. Please switch network in MetaMask.");
+          return;
+        }
+
+        const addr = await signer.getAddress();
+        accountEl.textContent = addr;
+
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+        setStatus("Wallet connected.");
+        await refreshBalance();
+      } catch (e) {
+        setStatus(e.message || "Failed to connect wallet.");
+      }
+    }
+
+    async function refreshBalance() {
+      try {
+        if (!contract) throw new Error("Connect wallet first.");
+        // Your contract has: function getBalance() public view returns (uint256)
+        const raw = await contract.getBalance();
+        const eth = ethers.utils.formatEther(raw);
+        vaultBalEl.textContent = eth;
+        setStatus("Balance updated.");
+      } catch (e) {
+        setStatus(e.message || "Failed to read balance.");
+      }
+    }
+
+    async function deposit() {
+      try {
+        if (!contract) throw new Error("Connect wallet first.");
+        const amt = depositAmt.value.trim();
+        if (!amt || Number(amt) <= 0) throw new Error("Enter a valid deposit amount.");
+        const tx = await contract.deposit({ value: ethers.utils.parseEther(amt) });
+        setStatus("Depositing… waiting for confirmation…");
+        await tx.wait();
+        setStatus("Deposit confirmed.");
+        await refreshBalance();
+      } catch (e) {
+        setStatus(e.reason || e.message || "Deposit failed.");
+      }
+    }
+
+    async function withdraw() {
+      try {
+        if (!contract) throw new Error("Connect wallet first.");
+        const amt = withdrawAmt.value.trim();
+        if (!amt || Number(amt) <= 0) throw new Error("Enter a valid withdraw amount.");
+        const tx = await contract.withdraw(ethers.utils.parseEther(amt));
+        setStatus("Withdrawing… waiting for confirmation…");
+        await tx.wait();
+        setStatus("Withdraw confirmed.");
+        await refreshBalance();
+      } catch (e) {
+        setStatus(e.reason || e.message || "Withdraw failed.");
+      }
+    }
+
+    // events
+    connectBtn.onclick = connectWallet;
+    refreshBtn.onclick = refreshBalance;
+    depositBtn.onclick = deposit;
+    withdrawBtn.onclick = withdraw;
+
+    // auto-refresh on account/network change
+    if (window.ethereum) {
+      window.ethereum.on?.("accountsChanged", () => connectWallet());
+      window.ethereum.on?.("chainChanged", () => location.reload());
+    }
+  </script>
+</body>
+</html>    
