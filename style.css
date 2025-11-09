@@ -19,3 +19,49 @@ p {
   font-size: 20px;
   color: #c9d1d9;
 }
+html, body {
+  background: #0f1226;
+  color: #e9ecff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.card {
+  max-width: 640px;
+  margin: 6vh auto;
+  background: #171a38;
+  border: 1px solid #2a2e5a;
+  border-radius: 12px;
+  padding: 22px 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+
+h1 { margin: 0 0 14px; font-size: 28px; }
+
+.row { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+
+input {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid #2a2e5a;
+  border-radius: 8px;
+  background: #0f1226;
+  color: #e9ecff;
+  outline: none;
+}
+
+button {
+  padding: 10px 14px;
+  border: 1px solid #4750d6;
+  background: #5760ff;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.05); }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
+#status { margin-top: 12px; color: #b9c0ff; }
+hr { border: none; border-top: 1px solid #2a2e5a; margin: 16px 0; }
